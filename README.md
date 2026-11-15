@@ -1,0 +1,2 @@
+# vathautosignalbot
+botsignal
