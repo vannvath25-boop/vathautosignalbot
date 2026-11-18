@@ -468,6 +468,55 @@
   .empty-state .icon { font-size: 2.6rem; opacity:.4; margin-bottom:12px; }
   .empty-state p { font-size:.9rem; }
 
+  /* ===== Win Rate Panel ===== */
+  .winrate-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+    margin-bottom: 20px;
+  }
+  .stat-box {
+    background: var(--glass2);
+    border: 1px solid var(--stroke);
+    border-radius: 16px; padding: 20px 16px;
+    text-align: center; position: relative; overflow: hidden;
+    transition: all .35s cubic-bezier(.4,0,.2,1);
+  }
+  .stat-box:hover { transform: translateY(-3px); border-color: var(--stroke2); }
+  .stat-box .label {
+    font-size: .72rem; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 1.5px; font-weight: 700; margin-bottom: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .stat-box .value { font-family: 'Space Grotesk', sans-serif; font-size: 1.8rem; font-weight: 800; }
+  .stat-box.wins .value { color: #4ade80; text-shadow: 0 0 20px rgba(74,222,128,.3); }
+  .stat-box.losses .value { color: #fb7185; text-shadow: 0 0 20px rgba(251,113,133,.3); }
+  .stat-box.total .value { color: var(--accent); text-shadow: 0 0 20px rgba(34,211,238,.3); }
+  
+  .winrate-bar-wrap {
+    background: rgba(5,7,15,.6); border-radius: 12px; padding: 6px; margin-bottom: 16px;
+    border: 1px solid var(--stroke);
+  }
+  .winrate-bar {
+    height: 12px; border-radius: 6px; display: flex; overflow: hidden;
+    background: rgba(120,160,255,.1);
+  }
+  .winrate-bar .win-fill {
+    background: linear-gradient(90deg, #22c55e, #4ade80);
+    transition: width .6s cubic-bezier(.4,0,.2,1); border-radius: 6px 0 0 6px;
+  }
+  .winrate-bar .loss-fill {
+    background: linear-gradient(90deg, #f43f5e, #fb7185);
+    transition: width .6s cubic-bezier(.4,0,.2,1);
+  }
+  
+  .winrate-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+  .winrate-actions .btn { padding: 10px 20px; font-size: .88rem; border-radius: 10px; }
+  .btn-win { background: rgba(34,197,94,.15); color: #4ade80; border: 1px solid rgba(34,197,94,.35); }
+  .btn-win:hover { background: rgba(34,197,94,.25); box-shadow: 0 0 20px rgba(34,197,94,.2); transform: translateY(-2px); }
+  .btn-loss { background: rgba(244,63,94,.15); color: #fb7185; border: 1px solid rgba(244,63,94,.35); }
+  .btn-loss:hover { background: rgba(244,63,94,.25); box-shadow: 0 0 20px rgba(244,63,94,.2); transform: translateY(-2px); }
+  .btn-reset-wr { background: rgba(120,160,255,.1); color: var(--muted); border: 1px solid var(--stroke2); }
+  .btn-reset-wr:hover { background: rgba(120,160,255,.2); color: var(--text); }
+
   .modal-overlay {
     position:fixed; inset:0; z-index:100; padding:20px;
     display:none; align-items:flex-start; justify-content:center;
@@ -621,6 +670,10 @@
     .history-item { grid-template-columns: auto 1fr auto; padding: 14px; gap:10px; }
     .history-prices { font-size:.74rem; gap:10px; }
     .history-signal { font-size:.75rem; padding: 5px 9px; }
+    .winrate-grid { gap: 8px; }
+    .stat-box { padding: 15px 8px; }
+    .stat-box .value { font-size: 1.4rem; }
+    .stat-box .label { font-size: .65rem; }
   }
 </style>
 </head>
@@ -701,6 +754,42 @@
     </div>
     <div class="reason" id="reasonBox" style="display:none"></div>
     <div class="tg-status hidden" id="tgStatus"></div>
+  </div>
+
+  <!-- ✅ NEW: Win Rate Panel -->
+  <div class="card" id="winrateCard" style="animation-delay:.15s">
+    <div class="card-head">
+      <div class="icon-chip">🏆</div>
+      <h2 data-i18n="winRateTitle">Win Rate Performance</h2>
+    </div>
+    
+    <div class="winrate-grid">
+      <div class="stat-box wins">
+        <div class="label">✅ <span data-i18n="wins">Wins</span></div>
+        <div class="value" id="wrWins">0</div>
+      </div>
+      <div class="stat-box losses">
+        <div class="label">❌ <span data-i18n="losses">Losses</span></div>
+        <div class="value" id="wrLosses">0</div>
+      </div>
+      <div class="stat-box total">
+        <div class="label">🎯 <span data-i18n="winrate">Win Rate</span></div>
+        <div class="value" id="wrPercent">0%</div>
+      </div>
+    </div>
+
+    <div class="winrate-bar-wrap">
+      <div class="winrate-bar">
+        <div class="win-fill" id="wrWinBar" style="width:0%"></div>
+        <div class="loss-fill" id="wrLossBar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="winrate-actions">
+      <button class="btn btn-win" onclick="addWinRate('win')">➕ <span data-i18n="addWin">Add Win</span></button>
+      <button class="btn btn-loss" onclick="addWinRate('loss')">➖ <span data-i18n="addLoss">Add Loss</span></button>
+      <button class="btn btn-reset-wr" onclick="resetWinRate()">🔄 <span data-i18n="resetWR">Reset</span></button>
+    </div>
   </div>
 
   <div class="card" id="historyCard" style="animation-delay:.1s">
@@ -808,6 +897,15 @@ const i18n = {
     deleted: "បានលុប!",
     cleared: "បានសម្អាតប្រវត្តិទាំងអស់!",
     autoCleared: "ប្រវត្តិចាស់ជាង 24 ម៉ោង ត្រូវបានលុបដោយស្វ័យប្រវត្តិ!",
+    winRateTitle: "ស្ថិតិអត្រាឈ្នះ (Win Rate)",
+    wins: "ឈ្នះ",
+    losses: "ចាញ់",
+    winrate: "អត្រាឈ្នះ",
+    addWin: "បន្ថែមឈ្នះ",
+    addLoss: "បន្ថែមចាញ់",
+    resetWR: "កំណត់ឡើងវិញ",
+    confirmResetWR: "តើអ្នកចង់កំណត់ស្ថិតិឈ្នះចាញ់ឡើងវិញមែនទេ?",
+    wrReset: "បានកំណត់ស្ថិតិឡើងវិញ!",
     settingsTitle: "ការកំណត់",
     settingsSub: "កំណត់ភាសា, Gemini API Key និង Telegram Bot។ រក្សាទុកក្នុង browser។",
     languageLabel: "ភាសា",
@@ -856,6 +954,15 @@ const i18n = {
     deleted: "Deleted!",
     cleared: "All history cleared!",
     autoCleared: "History older than 24h was auto-deleted!",
+    winRateTitle: "Win Rate Performance",
+    wins: "Wins",
+    losses: "Losses",
+    winrate: "Win Rate",
+    addWin: "Add Win",
+    addLoss: "Add Loss",
+    resetWR: "Reset",
+    confirmResetWR: "Reset win rate stats?",
+    wrReset: "Stats reset!",
     settingsTitle: "Settings",
     settingsSub: "Configure language, Gemini API key and Telegram bot. Stored locally in your browser.",
     languageLabel: "Language",
@@ -895,13 +1002,14 @@ function setLanguage(lang) {
   document.getElementById('langKm').classList.toggle('active', lang === 'km');
   document.getElementById('langEn').classList.toggle('active', lang === 'en');
   renderHistory();
+  renderWinRate();
 }
 function t(key) { return i18n[currentLang][key] || key; }
 
 /* ============ Image Handling & Compression ============ */
 let currentImageBase64 = null;
 
-function compressImage(file, maxWidth = 1024) {
+function compressImage(file, maxWidth = 800) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -933,7 +1041,7 @@ async function handleFile(e) {
   const file = e.target.files[0];
   if (!file) return;
   try {
-    currentImageBase64 = await compressImage(file, 1024);
+    currentImageBase64 = await compressImage(file, 800);
     document.getElementById('preview').src = currentImageBase64;
     document.getElementById('previewWrap').style.display = 'block';
     document.getElementById('dropZone').style.display = 'none';
@@ -970,7 +1078,7 @@ dz.addEventListener('drop', async e => {
   const f = e.dataTransfer.files[0];
   if (f && f.type.startsWith('image/')) {
     try {
-      currentImageBase64 = await compressImage(f, 1024);
+      currentImageBase64 = await compressImage(f, 800);
       document.getElementById('preview').src = currentImageBase64;
       document.getElementById('previewWrap').style.display = 'block';
       dz.style.display = 'none';
@@ -1018,23 +1126,72 @@ function showToast(msg) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
 }
 
+/* ============ Win Rate Logic ============ */
+const WR_KEY = 'vas_winrate';
+
+function loadWinRate() {
+  try {
+    return JSON.parse(localStorage.getItem(WR_KEY) || '{"wins":0, "losses":0}');
+  } catch {
+    return { wins: 0, losses: 0 };
+  }
+}
+
+function saveWinRate(data) {
+  localStorage.setItem(WR_KEY, JSON.stringify(data));
+}
+
+function addWinRate(type) {
+  const data = loadWinRate();
+  if (type === 'win') data.wins++;
+  else data.losses++;
+  saveWinRate(data);
+  renderWinRate();
+}
+
+function resetWinRate() {
+  if (!confirm(t('confirmResetWR'))) return;
+  saveWinRate({ wins: 0, losses: 0 });
+  renderWinRate();
+  showToast(t('wrReset'));
+}
+
+function renderWinRate() {
+  const data = loadWinRate();
+  const total = data.wins + data.losses;
+  const winRate = total === 0 ? 0 : Math.round((data.wins / total) * 100);
+  const lossRate = total === 0 ? 0 : 100 - winRate;
+
+  document.getElementById('wrWins').textContent = data.wins;
+  document.getElementById('wrLosses').textContent = data.losses;
+  document.getElementById('wrPercent').textContent = winRate + '%';
+
+  const winBar = document.getElementById('wrWinBar');
+  const lossBar = document.getElementById('wrLossBar');
+
+  if (total === 0) {
+    winBar.style.width = '0%';
+    lossBar.style.width = '0%';
+  } else {
+    winBar.style.width = winRate + '%';
+    lossBar.style.width = lossRate + '%';
+  }
+}
+
 /* ============ History (Auto-Delete 24h) ============ */
 const HISTORY_KEY = 'vas_history';
 const MAX_HISTORY = 50;
-const EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 ម៉ោងគិតជាមីលីវិនាទី
+const EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 ម៉ោង
 
 function loadHistory() {
   try {
     let arr = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
     const now = Date.now();
     const initialLength = arr.length;
-    // ត្រងយកតែអ្វីដែលមិនទាន់ផុតកំណត់ 24 ម៉ោង
     arr = arr.filter(item => (now - item.time) < EXPIRY_TIME);
     
-    // ប្រសិនបើមានការលុបដោយស្វ័យប្រវត្តិ សូមរក្សាទុកឡើងវិញ
     if (arr.length !== initialLength) {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(arr));
-      // បង្ហាញសារបើវាលុបពេលកំពុងបើក
       if (initialLength > 0) {
         setTimeout(() => showToast(t('autoCleared')), 500);
       }
@@ -1080,7 +1237,6 @@ function formatTime(ts) {
   const now = new Date();
   const diffMs = now - d;
   
-  // គណនាម៉ោងដែលនៅសល់រហូតដល់លុប (24 ម៉ោង)
   const remainMs = EXPIRY_TIME - diffMs;
   const remainHr = Math.floor(remainMs / 3600000);
   const remainMin = Math.floor((remainMs % 3600000) / 60000);
@@ -1222,22 +1378,21 @@ async function runAnalysis() {
   loader.classList.add('active');
   resetResults();
 
-  const models = ['gemini-3.8-flash', 'gemini-3.6-flash']; 
+  const models = ['gemini-3.5-flash-lite', 'gemini-3.6-flash']; 
   let lastError = null;
 
   try {
     const base64Data = currentImageBase64.split(',')[1];
     const mimeType = currentImageBase64.substring(5, currentImageBase64.indexOf(';'));
 
-    // 🚀 កែសម្រួល Prompt ឱ្យវិភាគតាម ICT និង FVG
-    const prompt = `You are a professional XAUUSD (Gold) trader specializing in **Inner Circle Trader (ICT)** concepts and **Smart Money Concepts (SMC)**.
-Analyze this chart image specifically looking for:
+    const prompt = `You are an expert XAUUSD (Gold) trader specializing in **Inner Circle Trader (ICT)** and **Smart Money Concepts (SMC)**.
+Analyze this chart image carefully. Look for:
 1. Market Structure (BOS / CHoCH)
-2. Fair Value Gaps (FVG)
+2. Fair Value Gaps (FVG) - especially recent ones
 3. Order Blocks (OB)
-4. Liquidity Pools
+4. Liquidity Sweeps
 
-Based on these ICT principles, provide a trading signal. 
+Provide a trading signal. 
 Respond ONLY with a valid JSON object (no markdown, no backticks) in this exact format:
 {
   "signal": "BUY" | "SELL" | "HOLD",
@@ -1247,16 +1402,17 @@ Respond ONLY with a valid JSON object (no markdown, no backticks) in this exact 
   "reason": "Explain the setup in ${currentLang === 'km' ? 'Khmer' : 'English'} (e.g., 'Price swept liquidity and tapped into 1H FVG...'). Max 3 sentences."
 }
 Rules:
+- Try to find a setup. Only output "HOLD" if the chart is completely choppy and unclear.
+- If there is a slight FVG or OB, give a BUY or SELL signal.
 - SL must be extremely tight, placed just past the FVG/Order Block invalidation level.
 - TP should target the next liquidity pool or swing high/low.
-- If there is no clear ICT setup, output "HOLD".
-- Use realistic XAUUSD price levels based on the chart.`;
+- Use realistic XAUUSD price levels based on the chart (e.g., 3750.50).`;
 
     let result = null;
 
     for (let i = 0; i < models.length; i++) {
       const currentModel = models[i];
-      let retries = 3; 
+      let retries = 1; 
       
       while (retries > 0) {
         try {
@@ -1297,20 +1453,13 @@ Rules:
 
         } catch (err) {
           lastError = err;
-          if (err.message === 'HIGH_DEMAND') {
-            retries--;
-            if (retries > 0) {
-              await new Promise(r => setTimeout(r, 2000));
-              continue;
-            }
-          }
-          break;
+          break; 
         }
       }
       if (result) break; 
     }
 
-    if (!result) throw lastError || new Error('Analysis failed after retries.');
+    if (!result) throw lastError || new Error('Analysis failed.');
 
     displayResult(result);
     addToHistory(result);
@@ -1351,15 +1500,16 @@ function displayResult(r) {
 /* ============ Init ============ */
 setLanguage(currentLang);
 renderHistory();
+renderWinRate();
 
 // ពិនិត្យមើលរាល់ ១ នាទីម្តង ដើម្បីលុបប្រវត្តិដែលផុត ២៤ ម៉ោងដោយស្វ័យប្រវត្តិ
 setInterval(() => {
   const arrBefore = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]').length;
   const arrAfter = loadHistory().length;
   if (arrBefore !== arrAfter) {
-    renderHistory(); // Update UI បើមានការលុប
+    renderHistory();
   } else {
-    renderHistory(); // Update ការរាប់ថយក្រោយ
+    renderHistory();
   }
 }, 60000);
 </script>
